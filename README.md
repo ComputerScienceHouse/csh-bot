@@ -1,5 +1,7 @@
 # CSH Bot
 
+[![Build Status](https://travis-ci.org/ComputerScienceHouse/csh-bot.svg?branch=master)](https://travis-ci.org/ComputerScienceHouse/csh-bot)
+
 The fulfillment service for a DialogFlow agent built to control CSH projects.
 
 DialogFlow is a service (now run by Google) that performs natural-language
