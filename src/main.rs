@@ -27,6 +27,7 @@
 //! [ngrok]: https://ngrok.com/
 
 #![allow(non_snake_case)]
+#![deny(warnings)]
 
 #[macro_use]
 extern crate serde_derive;
@@ -69,12 +70,13 @@ fn fulfillment(info: Json<Request>) -> Result<Json<Response>> {
     println!("Received a fulfillment request: {:#?}", info);
 
     let response: Option<String> = match &*info.queryResult.intent.name {
-        "projects/shitpost-5f519/agent/intents/db2d53af-2d4e-47a5-a6e8-e27adb491ab7" => Some(turn_lights_on()),
-        "projects/shitpost-5f519/agent/intents/5b3ee694-7626-493c-a5e4-f403b19444b5" => {
+        "projects/computersentiencehouse/agent/intents/a3fbc0a8-8323-4d0b-8085-eb057c6f6129" => {
             // Extract "queryResult.parameters.Room" from JSON request
             let room = info.queryResult.parameters.get("Room")
                 .expect("should have a 'Room' entitiy");
-            Some(turn_lights_off(room))
+            let enabled = info.queryResult.parameters.get("Enabled")
+                .expect("should have an 'Enabled' entity");
+            Some(set_lights(room, enabled))
         },
         _ => None
     };
@@ -87,20 +89,20 @@ fn fulfillment(info: Json<Request>) -> Result<Json<Response>> {
     Ok(Json(response))
 }
 
-/// Intent handler for the "turn lights on" intent.
+/// Intent handler for the "Set Lights" intent.
 ///
-/// As it's currently written, there are no entities for "turn lights on".
-fn turn_lights_on() -> String {
-    format!("The lights are on _for reals_")
-}
-
-/// Intent handler for the "turn lights off" intent.
+/// # Entities
 ///
-/// As it's currently written, we have one "Room" entity, which represents
-/// which room's lights to turn off. The possible values of "Room" are
-/// `Lounge`, `Library`, and `User Center`.
-fn turn_lights_off(room: &str) -> String {
-    format!("I'm turning off the lights in the {}!", room.to_lowercase())
+/// * `Room`: Represents which room's lights to turn on or off. The possible
+/// values are `Lounge`, `Library`, and `User Center`.
+///
+/// * `Enabled`: Whether to turn the lights on or off. The possible values
+/// are `On` or `Off`.
+fn set_lights(room: &str, enabled: &str) -> String {
+    format!("I'm turning the lights in the {} {}!",
+            room.to_lowercase(),
+            enabled.to_lowercase(),
+    )
 }
 
 fn main() {
