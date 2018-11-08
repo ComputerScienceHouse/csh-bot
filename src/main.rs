@@ -33,6 +33,7 @@ extern crate serde_derive;
 extern crate serde;
 extern crate actix_web;
 
+use std::collections::HashMap;
 use actix_web::{server, http, App, Json, Result};
 
 #[derive(Debug, Deserialize)]
@@ -45,6 +46,7 @@ struct Intent {
 struct QueryResult {
     queryText: String,
     intent: Intent,
+    parameters: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,12 +59,23 @@ struct Response {
     fulfillmentText: String,
 }
 
+/// Receive the request, execute an intent handler, and return a response.
+///
+/// This is basically a router that switches based on the intent ID of the
+/// request received from DialogFlow. Based on the intent, we extract the
+/// entities (sentence parameters) from the request and pass execution to an
+/// intent handler, passing the entity data to the handler.
 fn fulfillment(info: Json<Request>) -> Result<Json<Response>> {
     println!("Received a fulfillment request: {:#?}", info);
 
     let response: Option<String> = match &*info.queryResult.intent.name {
         "projects/shitpost-5f519/agent/intents/db2d53af-2d4e-47a5-a6e8-e27adb491ab7" => Some(turn_lights_on()),
-        "projects/shitpost-5f519/agent/intents/5b3ee694-7626-493c-a5e4-f403b19444b5" => Some(turn_lights_off()),
+        "projects/shitpost-5f519/agent/intents/5b3ee694-7626-493c-a5e4-f403b19444b5" => {
+            // Extract "queryResult.parameters.Room" from JSON request
+            let room = info.queryResult.parameters.get("Room")
+                .expect("should have a 'Room' entitiy");
+            Some(turn_lights_off(room))
+        },
         _ => None
     };
 
@@ -74,15 +87,25 @@ fn fulfillment(info: Json<Request>) -> Result<Json<Response>> {
     Ok(Json(response))
 }
 
+/// Intent handler for the "turn lights on" intent.
+///
+/// As it's currently written, there are no entities for "turn lights on".
 fn turn_lights_on() -> String {
     format!("The lights are on _for reals_")
 }
 
-fn turn_lights_off() -> String {
-    format!("The lights are off _for reals_")
+/// Intent handler for the "turn lights off" intent.
+///
+/// As it's currently written, we have one "Room" entity, which represents
+/// which room's lights to turn off. The possible values of "Room" are
+/// `Lounge`, `Library`, and `User Center`.
+fn turn_lights_off(room: &str) -> String {
+    format!("I'm turning off the lights in the {}!", room.to_lowercase())
 }
 
 fn main() {
+    // Open an HTTP server on port 8000, using the "fulfillment" function
+    // to handle all POST requests sent to the index ("/") route.
     server::new(|| {
         App::new()
             .resource("/", |r| r.method(http::Method::POST).with(fulfillment))
