@@ -35,7 +35,7 @@ extern crate serde;
 extern crate actix_web;
 
 use std::collections::HashMap;
-use actix_web::{server, http, App, Json, Result};
+use actix_web::{HttpServer, App, web, Responder, HttpResponse};
 
 #[derive(Debug, Deserialize)]
 struct Intent {
@@ -66,7 +66,7 @@ struct Response {
 /// request received from DialogFlow. Based on the intent, we extract the
 /// entities (sentence parameters) from the request and pass execution to an
 /// intent handler, passing the entity data to the handler.
-fn fulfillment(info: Json<Request>) -> Result<Json<Response>> {
+fn fulfillment(info: web::Json<Request>) -> impl Responder {
     println!("Received a fulfillment request: {:#?}", info);
 
     let response: Option<String> = match &*info.queryResult.intent.name {
@@ -86,7 +86,7 @@ fn fulfillment(info: Json<Request>) -> Result<Json<Response>> {
         None => Response { fulfillmentText: format!("Sorry, I don't know how to do that yet.") },
     };
 
-    Ok(Json(response))
+    HttpResponse::Ok().json(response)
 }
 
 /// Intent handler for the "Set Lights" intent.
@@ -108,11 +108,11 @@ fn set_lights(room: &str, enabled: &str) -> String {
 fn main() {
     // Open an HTTP server on port 8000, using the "fulfillment" function
     // to handle all POST requests sent to the index ("/") route.
-    server::new(|| {
+    HttpServer::new(move || {
         App::new()
-            .resource("/", |r| r.method(http::Method::POST).with(fulfillment))
+            .route("/", web::get().to(fulfillment))
     })
     .bind("127.0.0.1:8000")
     .expect("Can not bind to port 8000")
-    .run();
+    .start();
 }
