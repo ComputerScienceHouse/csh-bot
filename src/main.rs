@@ -26,24 +26,21 @@
 //!
 //! [ngrok]: https://ngrok.com/
 
-#![allow(non_snake_case)]
 #![deny(warnings)]
 
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
-extern crate actix_web;
-
 use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
 use actix_web::{HttpServer, App, web, Responder, HttpResponse};
 
 #[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
 struct Intent {
     name: String,
     displayName: String,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
 struct QueryResult {
     queryText: String,
     intent: Intent,
@@ -51,11 +48,13 @@ struct QueryResult {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
 struct Request {
     queryResult: QueryResult,
 }
 
 #[derive(Debug, Serialize)]
+#[allow(non_snake_case)]
 struct Response {
     fulfillmentText: String,
 }
@@ -66,7 +65,7 @@ struct Response {
 /// request received from DialogFlow. Based on the intent, we extract the
 /// entities (sentence parameters) from the request and pass execution to an
 /// intent handler, passing the entity data to the handler.
-fn fulfillment(info: web::Json<Request>) -> impl Responder {
+async fn fulfillment(info: web::Json<Request>) -> impl Responder {
     println!("Received a fulfillment request: {:#?}", info);
 
     let response: Option<String> = match &*info.queryResult.intent.name {
@@ -105,7 +104,8 @@ fn set_lights(room: &str, enabled: &str) -> String {
     )
 }
 
-fn main() {
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
     // Open an HTTP server on port 8000, using the "fulfillment" function
     // to handle all POST requests sent to the index ("/") route.
     HttpServer::new(move || {
@@ -114,5 +114,6 @@ fn main() {
     })
     .bind("127.0.0.1:8000")
     .expect("Can not bind to port 8000")
-    .start();
+    .run()
+    .await
 }
